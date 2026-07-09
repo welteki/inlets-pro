@@ -1,0 +1,35 @@
+name: sync-release-artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Sync a single release tag. Leave empty to sync all missing releases."
+        required: false
+        type: string
+  schedule:
+    - cron: "17 2 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-release-artifacts:
+    name: Sync release artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup arkade
+        uses: alexellis/arkade-get@master
+        with:
+          crane: v0.21.7
+
+      - name: Sync release artifacts
+        env:
+          SOURCE_IMAGE: ghcr.io/openfaasltd/inlets-pro-artifacts
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: ./hack/sync-release-artifacts.sh "${SOURCE_IMAGE}" "${GITHUB_REPOSITORY}" "${TAG}" >> "${GITHUB_STEP_SUMMARY}"
