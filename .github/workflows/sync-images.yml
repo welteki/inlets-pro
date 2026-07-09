@@ -1,0 +1,42 @@
+name: sync-images
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Sync a single tag. Leave empty to sync all missing tags."
+        required: false
+        type: string
+  schedule:
+    - cron: "17 2 * * *"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  sync-images:
+    name: Sync missing images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup arkade
+        uses: alexellis/arkade-get@master
+        with:
+          crane: v0.21.7
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ github.token }}" | crane auth login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Sync images
+        env:
+          SOURCE_IMAGE: ghcr.io/openfaasltd/inlets-pro
+          TARGET_IMAGE: ghcr.io/inlets/inlets-pro
+          TAG: ${{ inputs.tag }}
+        run: ./hack/sync-images.sh "${SOURCE_IMAGE}" "${TARGET_IMAGE}" "${TAG}" >> "${GITHUB_STEP_SUMMARY}"
